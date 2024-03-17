@@ -1,0 +1,809 @@
+import os
+import json
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+import random
+
+python_easy_questions = []
+python_medium_questions = []
+python_hard_questions = []
+cpp_easy_questions = []
+cpp_medium_questions = []
+cpp_hard_questions = []
+
+class LoginPage:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Login Page")
+        self.root.geometry("1800x1800")
+
+        # Main Frame
+        self.main_frame = tk.Frame(root, bg="white")
+        self.main_frame.pack(expand=True, fill="both")
+
+        # Login Frame
+        self.login_frame = tk.Frame(self.main_frame, bg="white")
+        self.login_frame.pack(side="left", padx=100)
+
+        # App Name Label
+        self.app_name_label = tk.Label(self.login_frame, text="🌟 Quiz Code 🌟", font=("Arial", 50, "bold"), fg="blue", bg="white")
+        self.app_name_label.pack(pady=(50, 20))
+
+        # Login Header
+        self.login_header_label = tk.Label(self.login_frame, text="LOGIN TO YOUR ACCOUNT", font=("Arial", 20, "bold"), bg="white")
+        self.login_header_label.pack(pady=10)
+
+        # Username Entry
+        self.username_label = tk.Label(self.login_frame, text="Username:", font=("Arial", 15), bg="white")
+        self.username_label.pack(pady=5)
+        self.username_entry = tk.Entry(self.login_frame, width=40, font=("Arial", 12))
+        self.username_entry.pack(pady=5)
+
+        # Password Entry
+        self.password_label = tk.Label(self.login_frame, text="Password:", font=("Arial", 15), bg="white")
+        self.password_label.pack(pady=5)
+        self.password_entry = tk.Entry(self.login_frame, show="*", width=40, font=("Arial", 12))
+        self.password_entry.pack(pady=5)
+
+        # Login Button
+        self.login_button = tk.Button(self.login_frame, text="Sign in", font=("Arial", 15), bg="blue", fg="white", width=15, command=self.login)
+        self.login_button.pack(pady=10)
+
+        # Vertical Line
+        self.vertical_line = tk.Frame(self.main_frame, width=2, bg="blue")
+        self.vertical_line.pack(side="left", fill="y", padx=50)
+
+        # Sign Up Frame
+        self.signup_frame = tk.Frame(self.main_frame, bg="white")
+        self.signup_frame.pack(side="left", padx=100)
+
+        # Sign Up Header
+        self.signup_header_label = tk.Label(self.signup_frame, text="NEW HERE? SIGN UP", font=("Arial", 30, "bold"), bg="white")
+        self.signup_header_label.pack(pady=(50, 20))
+
+        
+        # Sign Up Button
+        self.signup_button = tk.Button(self.signup_frame, text="Sign Up", font=("Arial", 15), bg="white", fg="blue", command=self.open_signup)
+        self.signup_button.pack()
+
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+
+        # Connect to SQLite database
+        self.conn = sqlite3.connect("quiz_database.db")
+        self.create_table()
+        self.display_users()
+
+
+    def login(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        # Check if username or password is empty
+        if not username or not password:
+            messagebox.showerror("Login Failed", "Please enter both username and password")
+            return
+  # Check if password length is between 8 and 14 characters
+        if not (8 <= len(password) <= 14):
+            messagebox.showerror("Login Failed", "Password length should be between 8 and 14 characters")
+            return    
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+            if cursor.fetchone():
+                messagebox.showinfo("Login Successful", f"Welcome back, {username}!")
+                self.open_options(username)
+            else:
+                messagebox.showerror("Login Failed", "Invalid username or password")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+
+    def open_signup(self):
+        self.root.withdraw()
+        signup_window = tk.Tk()
+        signup_page = SignupPage(signup_window)
+        signup_window.mainloop()
+
+    def open_options(self, username):
+        self.root.withdraw()
+        options_window = tk.Tk()
+        options_page = OptionsPage(options_window, username)
+        options_window.mainloop()
+       
+    def create_table(self):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                              (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                               username TEXT NOT NULL UNIQUE,
+                               password TEXT NOT NULL)''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS scores
+                              (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                               username TEXT NOT NULL,
+                               language TEXT NOT NULL,
+                               difficulty TEXT NOT NULL,
+                               score INTEGER NOT NULL)''')
+            self.conn.commit()
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+
+    def display_users(self):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT id, username, '********' FROM users")  # Masked password
+            users = cursor.fetchall()
+            print("Users in the database:")
+            for user in users:
+                print(user)
+                # Displaying scores table
+            cursor.execute("SELECT * FROM scores")
+            scores = cursor.fetchall()
+            print("Scores in the database:")
+            for score in scores:
+                print(score)
+        
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+class SignupPage:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Sign Up")
+        self.root.geometry("1800x1800")
+
+        self.app_name_label = tk.Label(root, text="🌟 Sign Up 🌟", font=("Arial", 50, "bold"), fg="blue")
+        self.app_name_label.pack(pady=(50, 50))
+
+        self.signup_frame = tk.Frame(root)
+        self.signup_frame.pack(pady=20)
+
+        self.username_label = tk.Label(self.signup_frame, text="Username:", font=("Arial", 15))
+        self.username_label.grid(row=0, column=0, padx=10, pady=5)
+        self.username_entry = tk.Entry(self.signup_frame, width=30, font=("Arial", 12))
+        self.username_entry.grid(row=0, column=1, padx=10, pady=5)
+
+        self.password_label = tk.Label(self.signup_frame, text="Password:", font=("Arial", 15))
+        self.password_label.grid(row=1, column=0, padx=10, pady=5)
+        self.password_entry = tk.Entry(self.signup_frame, show="*", width=30, font=("Arial", 12))
+        self.password_entry.grid(row=1, column=1, padx=10, pady=5)
+
+        self.signup_button = tk.Button(root, text="Sign Up", font=("Arial", 12), command=self.signup)
+        self.signup_button.pack(pady=10)
+
+        self.back_button = tk.Button(root, text="Back", font=("Arial", 12), command=self.go_back)
+        self.back_button.pack()
+
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+   
+        self.conn = sqlite3.connect("quiz_database.db")
+        self.create_table()
+
+    def signup(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+  
+        if not username or not password:
+            messagebox.showerror("Signup Failed", "Please enter both username and password")
+            return
+
+        if not (8 <= len(password) <= 14):
+            messagebox.showerror("Login Failed", "Password length should be between 8 and 14 characters")
+            return
+       
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+            if cursor.fetchone():
+                messagebox.showerror("Signup Failed", "Username already exists. Please choose another.")
+            else:
+                cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+                self.conn.commit()
+                messagebox.showinfo("Signup Successful", "Account created successfully. You can now login.")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+
+    def go_back(self):
+        self.root.destroy()
+        login_window = tk.Tk()
+        login_page = LoginPage(login_window)
+        login_window.mainloop()
+
+    def create_table(self):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                              (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                               username TEXT NOT NULL UNIQUE,
+                               password TEXT NOT NULL)''')
+            self.conn.commit()
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+
+class OptionsPage:
+    def __init__(self, root, username):
+        self.root = root
+        self.root.title("Options Page")
+        self.root.geometry("1800x1800")
+        self.root.config(bg="#f0f0f0")  # Setting background color
+
+        self.username = username
+
+        # Title Label (Same font and size as LoginPage)
+        self.app_name_label = tk.Label(root, text=f"🌟 Welcome, {username}! 🌟", font=("Arial", 30, "bold"), fg="blue", bg="#f0f0f0")
+        self.app_name_label.pack(pady=(50, 30))
+
+        # Student Button (Adjusted color to match LoginPage)
+        self.student_button = tk.Button(root, text="Student", font=("Arial", 20), command=self.select_student, bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.student_button.pack(pady=10)
+
+        # Teacher Button (Adjusted color to match LoginPage)
+        self.teacher_button = tk.Button(root, text="Teacher", font=("Arial", 20), command=self.select_teacher, bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.teacher_button.pack(pady=10)
+
+        # Back Button (Adjusted color to match LoginPage)
+        self.back_button = tk.Button(root, text="Back", font=("Arial", 20), command=self.go_back, bg="#6c757d", fg="white", bd=0, padx=20, pady=10)
+        self.back_button.pack(pady=10)
+
+        # Copyright Label (Same font and size as LoginPage)
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 10), fg="gray", bg="#f0f0f0")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+    def select_student(self):
+        self.root.withdraw()
+        student_window = tk.Tk()
+        student_page = StudentPage(student_window, self.username)
+        student_window.mainloop()
+
+    def select_teacher(self):
+        self.root.withdraw()
+        teacher_window = tk.Tk()
+        teacher_page = TeacherPage(teacher_window, self.username)
+        teacher_window.mainloop()
+
+    def go_back(self):
+        self.root.destroy()
+        login_window = tk.Tk()
+        login_page = LoginPage(login_window)
+        login_window.mainloop()
+class StudentPage:
+    def __init__(self, root, username):
+        self.root = root
+        self.root.title("Options Page")
+        self.root.geometry("1800x1800")
+        self.root.config(bg="#f0f0f0")  # Setting background color
+
+        self.username = username
+
+        # Title Label (Adjusted font and size to match StudentPage)
+        self.app_name_label = tk.Label(root, text=f"🌟 Welcome, {username}! 🌟", font=("Arial", 20, "bold"), fg="blue", bg="#f0f0f0")
+        self.app_name_label.pack(pady=(20, 10))
+
+        # Python Quiz Button (Adjusted colors and font to match StudentPage)
+        self.python_button = tk.Button(root, text="Python Quiz", font=("Arial", 18), command=self.select_python_difficulty, bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.python_button.pack(pady=10)
+
+        # C++ Quiz Button (Adjusted colors and font to match StudentPage)
+        self.cpp_button = tk.Button(root, text="C++ Quiz", font=("Arial", 18), command=self.select_cpp_difficulty, bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.cpp_button.pack(pady=10)
+
+        # Back Button (Adjusted colors and font to match StudentPage)
+        self.back_button = tk.Button(root, text="Back", font=("Arial", 18), command=self.go_back, bg="#6c757d", fg="white", bd=0, padx=20, pady=10)
+        self.back_button.pack(pady=10)
+
+        # Copyright Label (Same font and size as StudentPage)
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray", bg="#f0f0f0")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+
+    def select_python_difficulty(self):
+        self.root.withdraw()
+        python_difficulty_window = tk.Tk()
+        python_difficulty_page = DifficultyPage(python_difficulty_window, "Python", self.username)
+        python_difficulty_window.mainloop()
+
+    def select_cpp_difficulty(self):
+        self.root.withdraw()
+        cpp_difficulty_window = tk.Tk()
+        cpp_difficulty_page = DifficultyPage(cpp_difficulty_window, "C++", self.username)
+        cpp_difficulty_window.mainloop()
+
+    def go_back(self):
+        self.root.destroy()
+        options_window = tk.Tk()
+        options_page = OptionsPage(options_window, self.username)
+        options_window.mainloop()
+
+class TeacherBasePage:
+    def __init__(self, root, username):
+        self.username = username
+        self.root = root
+
+    class TeacherBasePage:
+     def __init__(self, root, username):
+        self.username = username
+        self.root = root
+
+    def load_questions(self, language, difficulty):
+        if language == "Python":
+            if difficulty == "Easy":
+                self.questions = random.sample(python_easy_questions, min(len(python_easy_questions), 10))
+            elif difficulty == "Medium":
+                self.questions = random.sample(python_medium_questions, min(len(python_medium_questions), 10))
+            elif difficulty == "Hard":
+                self.questions = random.sample(python_hard_questions, min(len(python_hard_questions), 10))
+        elif language == "C++":
+            if difficulty == "Easy":
+                self.questions = random.sample(cpp_easy_questions, min(len(cpp_easy_questions), 10))
+            elif difficulty == "Medium":
+                self.questions = random.sample(cpp_medium_questions, min(len(cpp_medium_questions), 10))
+            elif difficulty == "Hard":
+                self.questions = random.sample(cpp_hard_questions, min(len(cpp_hard_questions), 10))
+
+class TeacherPage(TeacherBasePage):
+    def __init__(self, root, username):
+        super().__init__(root, username)
+        self.language = "Python"  # Set the default language here
+        self.load_questions(self.language, "Easy")
+        self.root = root
+        self.root.title("Teacher Page")
+        self.root.geometry("1800x1800")
+
+        self.username = username
+
+        self.app_name_label = tk.Label(root, text=f"🌟 Welcome, {username}! 🌟", font=("Arial", 20, "bold"), fg="blue")
+        self.app_name_label.pack(pady=(20, 10))
+
+        self.question_frame = tk.Frame(root)
+        self.question_frame.pack(pady=20)
+        
+        self.question_label = tk.Label(self.question_frame, text="Question:", font=("Arial", 15))
+        self.question_label.grid(row=0, column=0, padx=10, pady=5)
+        self.question_entry = tk.Entry(self.question_frame, width=50, font=("Arial", 12))
+        self.question_entry.grid(row=0, column=1, padx=10, pady=5)
+
+        self.options_labels = []
+        self.options_entries = []
+        for i in range(4):
+            option_label = tk.Label(self.question_frame, text=f"Option {i+1}:", font=("Arial", 15))
+            option_label.grid(row=i+1, column=0, padx=10, pady=5)
+            option_entry = tk.Entry(self.question_frame, width=50, font=("Arial", 12))
+            option_entry.grid(row=i+1, column=1, padx=10, pady=5)
+            self.options_labels.append(option_label)
+            self.options_entries.append(option_entry)
+
+        self.answer_label = tk.Label(self.question_frame, text="Correct Answer:", font=("Arial", 15))
+        self.answer_label.grid(row=5, column=0, padx=10, pady=5)
+        self.answer_entry = tk.Entry(self.question_frame, width=50, font=("Arial", 12))
+        self.answer_entry.grid(row=5, column=1, padx=10, pady=5)
+
+        self.language_label = tk.Label(root, text="Select Language:", font=("Arial", 15))
+        self.language_label.pack(pady=(20, 10))
+        self.language_var = tk.StringVar(root)
+        self.language_var.set("Python")  # Default language selection
+        self.language_menu = tk.OptionMenu(root, self.language_var, "Python", "C++")
+        self.language_menu.pack()
+
+        self.difficulty_label = tk.Label(root, text="Select Difficulty:", font=("Arial", 15))
+        self.difficulty_label.pack(pady=10)
+        self.difficulty_var = tk.StringVar(root)
+        self.difficulty_var.set("Easy")  # Default difficulty selection
+        self.difficulty_menu = tk.OptionMenu(root, self.difficulty_var, "Easy", "Medium", "Hard")
+        self.difficulty_menu.pack()
+
+        self.add_question_button = tk.Button(root, text="Add Question", font=("Arial", 15), command=self.add_question)
+        self.add_question_button.pack(pady=20)
+
+        self.back_button = tk.Button(root, text="Back", font=("Arial", 15), command=self.go_back)
+        self.back_button.pack(pady=10)
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+
+    def add_question(self):
+        language = self.language_var.get()
+        difficulty = self.difficulty_var.get()
+        question = self.question_entry.get()
+        options = [entry.get() for entry in self.options_entries]
+        answer = self.answer_entry.get()
+
+        # Check if any field is empty
+        if not question or not all(options) or not answer:
+            messagebox.showerror("Error", "Please fill in all fields")
+            return
+
+        # Add the question to the appropriate list based on language and difficulty
+        if language == "Python":
+            if difficulty == "Easy":
+                python_easy_questions.append((question, options, answer))
+            elif difficulty == "Medium":
+                python_medium_questions.append((question, options, answer))
+            elif difficulty == "Hard":
+                python_hard_questions.append((question, options, answer))
+        elif language == "C++":
+            if difficulty == "Easy":
+                cpp_easy_questions.append((question, options, answer))
+            elif difficulty == "Medium":
+                cpp_medium_questions.append((question, options, answer))
+            elif difficulty == "Hard":
+                cpp_hard_questions.append((question, options, answer))
+
+        self.save_questions()
+        messagebox.showinfo("Success", "Question added successfully")
+
+    def go_back(self):
+        self.root.destroy()
+        options_window = tk.Tk()
+        options_page = OptionsPage(options_window, self.username)
+        options_window.mainloop()
+        
+    def save_questions(self):
+
+        #Save Python Questions    
+        python_questions = {
+            "easy": python_easy_questions,
+            "medium": python_medium_questions,
+            "hard": python_hard_questions
+        }
+        with open("python_questions.json", "w") as f:
+            json.dump(python_questions, f)
+
+        #Save C++ Questions    
+        cpp_questions = {
+            "easy": cpp_easy_questions,
+            "medium": cpp_medium_questions,
+            "hard": cpp_hard_questions
+        }
+        with open("cpp_questions.json", "w") as f:
+            json.dump(cpp_questions, f)
+
+    def load_saved_questions(self):
+        filename = f"{self.language}_{self.difficulty_var.get()}_questions.json"
+        print(f"Loading questions from {filename}")
+
+        try:
+            with open(filename, "r") as f:
+                # Check if the file is empty
+                file_contents = f.read().strip()
+                if not file_contents:
+                    print(f"{filename} is empty. Initializing with an empty list.")
+                    questions = []
+                else:
+                    # Attempt to load JSON data
+                    try:
+                        questions = json.loads(file_contents)
+
+                        if self.language == "Python":
+                            if self.difficulty_var.get() == "Easy":
+                                python_easy_questions.extend(questions)
+                            elif self.difficulty_var.get() == "Medium":
+                                python_medium_questions.extend(questions)
+                            elif self.difficulty_var.get() == "Hard":
+                                python_hard_questions.extend(questions)
+                        elif self.language == "C++":
+                            if self.difficulty_var.get() == "Easy":
+                                cpp_easy_questions.extend(questions)
+                            elif self.difficulty_var.get() == "Medium":
+                                cpp_medium_questions.extend(questions)
+                            elif self.difficulty_var.get() == "Hard":
+                                cpp_hard_questions.extend(questions)
+                    except json.decoder.JSONDecodeError:
+                        print(f"{filename} is not properly formatted. Initializing with an empty list.")
+                        # Initialize questions list with an empty list
+                        questions = []
+
+        except FileNotFoundError:
+            print(f"{filename} not found. Creating new file.")
+            with open(filename, "w") as f:
+                json.dump([], f)
+            questions = []
+
+    def update_questions(self):
+        difficulty = self.difficulty_var.get()
+        if difficulty == "Easy":
+            self.questions = [q[0] for q in python_easy_questions]
+            self.options = [q[1] for q in python_easy_questions]
+            self.answers = [q[2] for q in python_easy_questions]
+        elif difficulty == "Medium":
+            self.questions = [q[0] for q in python_medium_questions]
+            self.options = [q[1] for q in python_medium_questions]
+            self.answers = [q[2] for q in python_medium_questions]
+        elif difficulty == "Hard":
+            self.questions = [q[0] for q in python_hard_questions]
+            self.options = [q[1] for q in python_hard_questions]
+            self.answers = [q[2] for q in python_hard_questions]
+
+class DifficultyPage(TeacherBasePage):
+    def __init__(self, root, language, username):
+        super().__init__(root, username)  # Pass the username argument to the superclass constructor
+        self.root.title(f"{language} Difficulty")
+        self.root.geometry("1800x1800")
+        self.root.config(bg="#f0f0f0")  # Setting background color
+
+        self.username = username
+        self.language = language
+
+        # Title Label (Adjusted font and size)
+        self.app_name_label = tk.Label(root, text=f"Select Difficulty for {language}", font=("Arial", 20, "bold"), fg="blue", bg="#f0f0f0")
+        self.app_name_label.pack(pady=(20, 10))
+
+        # Easy Button (Adjusted colors and font)
+        self.easy_button = tk.Button(root, text="Easy", font=("Arial", 18), command=lambda: self.start_quiz("Easy"), bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.easy_button.pack(pady=10)
+
+        # Medium Button (Adjusted colors and font)
+        self.medium_button = tk.Button(root, text="Medium", font=("Arial", 18), command=lambda: self.start_quiz("Medium"), bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.medium_button.pack(pady=10)
+
+        # Hard Button (Adjusted colors and font)
+        self.hard_button = tk.Button(root, text="Hard", font=("Arial", 18), command=lambda: self.start_quiz("Hard"), bg="blue", fg="white", bd=0, padx=20, pady=10)
+        self.hard_button.pack(pady=10)
+
+        # Back Button (Adjusted colors and font)
+        self.back_button = tk.Button(root, text="Back", font=("Arial", 18), command=self.go_back, bg="#6c757d", fg="white", bd=0, padx=20, pady=10)
+        self.back_button.pack(pady=10)
+
+        # Copyright Label (Adjusted font and size)
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray", bg="#f0f0f0")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+
+    def start_quiz(self, difficulty):
+        self.load_questions(self.language, difficulty)
+        if not self.questions:  # Check if the questions list is empty
+            messagebox.showerror("Error", "No questions available for this difficulty.")
+            return
+        quiz_window = tk.Tk()
+        quiz = QuizPage(quiz_window, self.language, difficulty, self.username)
+        quiz_window.mainloop()
+
+    def go_back(self):
+        self.root.destroy()
+        options_window = tk.Tk()
+        options_page = OptionsPage(options_window, self.username)
+        options_window.mainloop()
+class ScorePage:
+    num_score_pages = 0  # Class variable to count instances of ScorePage
+
+    def __init__(self, root, username, score, total_questions):
+        ScorePage.num_score_pages += 1  # Increment the count of ScorePage instances
+        self.root = root
+        self.root.title("Quiz Score")
+        self.root.geometry("1800x1800")
+
+        self.username = username  # Instance variable to store the username
+        self.score = score  # Instance variable to store the score
+        self.total_questions = total_questions  # Instance variable to store the total number of questions
+
+        self.create_widgets()  # Method call to create widgets
+
+    def create_widgets(self):
+        # Display score
+        self.score_label = tk.Label(self.root, text=f"Congratulations, {self.username}!", font=("Arial", 30), fg="blue")
+        self.score_label.pack(pady=(50, 20))
+
+        # Draw circles for correct, total questions, and wrong answers
+        self.canvas_width = 600
+        self.canvas_height = 200
+        self.canvas = tk.Canvas(self.root, width=self.canvas_width, height=self.canvas_height)  # Instance variable to store the canvas
+        self.canvas.pack()
+
+        circle_radius = 50  # Radius of the circles
+
+        # Draw circle for correct answers
+        self.canvas.create_oval(self.canvas_width/6 - circle_radius, 50 - circle_radius,
+                                self.canvas_width/6 + circle_radius, 50 + circle_radius,
+                                outline="green", width=4)
+        self.canvas.create_text(self.canvas_width/6, 50, text=str(self.score), font=("Arial", 48, "bold"))
+
+        # Draw circle for total questions
+        self.canvas.create_oval(self.canvas_width/2 - circle_radius, 50 - circle_radius,
+                                self.canvas_width/2 + circle_radius, 50 + circle_radius,
+                                outline="blue", width=4)
+        self.canvas.create_text(self.canvas_width/2, 50, text=str(self.total_questions), font=("Arial", 48, "bold"))
+
+        # Draw circle for wrong answers
+        wrong_answers = self.total_questions - self.score
+        self.canvas.create_oval(self.canvas_width*5/6 - circle_radius, 50 - circle_radius,
+                                self.canvas_width*5/6 + circle_radius, 50 + circle_radius,
+                                outline="red", width=4)
+        self.canvas.create_text(self.canvas_width*5/6, 50, text=str(wrong_answers), font=("Arial", 48, "bold"))
+
+        # Add labels for each circle
+        self.canvas.create_text(self.canvas_width/6, 130, text="Correct", font=("Arial", 30))
+        self.canvas.create_text(self.canvas_width/2, 130, text="Total", font=("Arial", 30))
+        self.canvas.create_text(self.canvas_width*5/6, 130, text="Wrong", font=("Arial", 30))
+
+        # Add a label for "Your quiz has been submitted"
+        self.submitted_label = tk.Label(self.root, text="Your quiz has been submitted!", font=("Arial", 30), fg="blue")
+        self.submitted_label.pack(pady=50)
+
+        # Add an OK button to close the window
+        self.ok_button = tk.Button(self.root, text="OK", font=("Arial", 24), command=self.close_window)
+        self.ok_button.pack(pady=50)
+
+    def close_window(self):
+        self.root.destroy()
+
+
+class QuizPage:
+    # Define a class variable
+    num_quiz_pages = 0
+
+    # Constructor method
+    def __init__(self, root, language, difficulty, username):
+        # Instance variables
+        self.root = root  # Object variable
+        self.root.title(f"{language} Quiz - {difficulty}")
+        self.root.geometry("1800x1800")
+
+        # Styling
+        self.root.config(bg="#f0f0f0")  # Setting background color
+
+        self.username = username  # Object variable
+        self.language = language  # Object variable
+        self.difficulty = difficulty  # Object variable
+
+        self.questions = []  # Instance variable
+        self.options = []  # Instance variable
+        self.answers = []  # Instance variable
+        self.current_question_index = 0  # Instance variable
+        self.score = 0  # Instance variable
+        self.user_answers = []  # Instance variable
+        self.correct_answers = []
+        QuizPage.num_quiz_pages += 1
+        
+        # Method calls
+        self.load_questions()
+
+        # App Name Label
+        self.app_name_label = tk.Label(root, text=f"{language} Quiz - {difficulty}", font=("Arial", 24, "bold"), fg="white", bg="#007bff")
+        self.app_name_label.pack(fill="x", padx=10, pady=5)
+
+        # Question Number Label
+        self.question_number_label = tk.Label(root, text="", font=("Arial", 16), bg="#f0f0f0")
+        self.question_number_label.pack(pady=10)
+
+        # Question Label
+        self.question_label = tk.Label(root, text="", font=("Arial", 18), bg="#f0f0f0", wraplength=600)
+        self.question_label.pack(pady=10)
+
+        # Option Buttons
+        self.option_buttons = []
+        for i in range(4):
+            button = tk.Button(root, text="", font=("Arial", 16), command=lambda i=i: self.check_answer(i))
+            button.pack(pady=5, padx=10, fill="x")
+            self.option_buttons.append(button)
+
+        # Back Button
+        self.back_button = tk.Button(root, text="⬅️", font=("Arial", 12), command=self.previous_question)
+        self.back_button.pack(side="left", padx=(100, 50), pady=10)
+
+        # Next Button
+        self.next_button = tk.Button(root, text="➡️", font=("Arial", 12), command=self.next_question)
+        self.next_button.pack(side="right", padx=(50, 100), pady=10)
+
+        # Copyright Label
+        copyright_label = tk.Label(root, text="© Siddhi Naik - MVLU", font=("Arial", 8), fg="gray", bg="#f0f0f0")
+        copyright_label.pack(side="bottom", padx=10, pady=10, anchor="se")
+
+        # Method call
+        self.display_question()
+
+
+    def load_questions(self):
+        if self.language == "Python":
+            if self.difficulty == "Easy":
+                questions_data = python_easy_questions
+            elif self.difficulty == "Medium":
+                questions_data = python_medium_questions
+            elif self.difficulty == "Hard":
+                questions_data = python_hard_questions
+        elif self.language == "C++":
+            if self.difficulty == "Easy":
+                questions_data = cpp_easy_questions
+            elif self.difficulty == "Medium":
+                questions_data = cpp_medium_questions
+            elif self.difficulty == "Hard":
+                questions_data = cpp_hard_questions
+
+        # Shuffle the questions and select the first 10
+        random.shuffle(questions_data)
+        self.questions = [q[0] for q in questions_data[:10]]
+        self.options = [q[1] for q in questions_data[:10]]
+        self.answers = [q[2] for q in questions_data[:10]]
+    def display_question(self):
+        question_text = self.questions[self.current_question_index]
+        self.question_label.config(text=question_text)
+
+        options = self.options[self.current_question_index]
+        for i, option in enumerate(options):
+            self.option_buttons[i].config(text=option)
+    def check_answer(self, option_index):
+        selected_answer = self.options[self.current_question_index][option_index]
+        correct_answer = self.answers[self.current_question_index]
+        
+        # Check if the selected answer is correct
+        if selected_answer == correct_answer:
+            # Check if the selected answer was already incorrect
+            if selected_answer not in self.user_answers:
+                self.score += 1  # Increment score only if the answer was not previously selected
+        else:
+            # Remove the previously selected incorrect answer, if any
+            if correct_answer in self.user_answers:
+                self.score -= 1  # Decrement score if previously selected answer was correct
+            # Add the newly selected incorrect answer
+            self.user_answers.append(selected_answer)
+
+            # Remove the previously selected correct answer, if any
+            if correct_answer in self.correct_answers:
+                self.correct_answers.remove(correct_answer)
+
+        # Update the user's selected answer for the current question
+        self.user_answers.append(selected_answer)
+
+        # Update the correct answers list for the current question
+        if correct_answer not in self.correct_answers:
+            self.correct_answers.append(correct_answer)
+
+        # Change the text color of the selected option button
+        self.option_buttons[option_index].config(fg="black")
+        if hasattr(self, "last_selected_index"):
+            self.option_buttons[self.last_selected_index].config(fg="black")
+
+    def previous_question(self):
+        if self.current_question_index > 0:
+            self.current_question_index -= 1
+            self.display_question()
+    def next_question(self):
+        if self.current_question_index < len(self.questions) - 1:
+            self.current_question_index += 1
+            self.display_question()
+        else:
+            self.root.withdraw()
+            self.save_score()
+            self.open_score_page()
+    def open_score_page(self):
+     score_window = tk.Toplevel(self.root)
+     score_page = ScorePage(score_window, self.username, self.score, len(self.questions))
+
+    def save_score(self):
+        try:
+            conn = sqlite3.connect("quiz_database.db")
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO scores (username, language, difficulty, score) VALUES (?, ?, ?, ?)",
+                           (self.username, self.language, self.difficulty, self.score))
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+
+    def go_back(self):
+        self.root.destroy()
+        difficulty_window = tk.Tk()
+        difficulty_page = DifficultyPage(difficulty_window, self.language, self.username)
+        difficulty_window.mainloop()
+
+# Initialize the login page
+if __name__ == "__main__":
+    # Load the questions from the file if it exists
+    try:
+        files = ["python_questions.json", "cpp_questions.json"]
+        for file in files:
+            if os.path.exists(file):
+                with open(file, "r") as f:
+                    try:
+                        questions_data = json.load(f)
+                        if questions_data:  # Check if the loaded data is not empty
+                            if "python" in file:
+                                python_easy_questions = questions_data["easy"]
+                                python_medium_questions = questions_data["medium"]
+                                python_hard_questions = questions_data["hard"]
+                            elif "cpp" in file:
+                                cpp_easy_questions = questions_data["easy"]
+                                cpp_medium_questions = questions_data["medium"]
+                                cpp_hard_questions = questions_data["hard"]
+                    except json.decoder.JSONDecodeError:
+                        print(f"Error: {file} contains invalid JSON data.")
+                        continue
+    except FileNotFoundError:
+        pass
+    login_window = tk.Tk()
+    login_page = LoginPage(login_window)
+    login_window.mainloop()
