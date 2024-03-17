@@ -40,8 +40,10 @@ Use the exit option provided in the application menu or close the application wi
 Notes
 Teachers should ensure that questions added are relevant and appropriate for the selected language and difficulty level.
 Students can test their knowledge by taking quizzes in either Python or C++ and at different difficulty levels.
+
 Contributors
 Siddhi Naik (MVLU)
+
 Disclaimer
 This application is developed for educational purposes only. The accuracy and relevance of questions may vary. Use at your own discretion.
 
